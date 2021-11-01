@@ -19,4 +19,6 @@ include_directories(3rd-party/stb_image)
 include_directories(3rd-party/glm)
 # include_directories(src/)
 
+include(cmake/shader.cmake)
+
 add_subdirectory(test_triangle)

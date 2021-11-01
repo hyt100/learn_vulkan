@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <set>
+#include "config.h"
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -426,8 +427,8 @@ private:
     }
 
     void createGraphicsPipeline() {
-        auto vertShaderCode = readFile("vert.spv");
-        auto fragShaderCode = readFile("frag.spv");
+        auto vertShaderCode = readFile(TEST_BIN_PATH "shader.vert.spv");
+        auto fragShaderCode = readFile(TEST_BIN_PATH "shader.frag.spv");
 
         VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
         VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
