@@ -251,6 +251,15 @@ private:
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
         for (const auto& device : devices) {
+            //////////////////////// 装了NVIDIA驱动导致INTEL显卡不能正常工作，因此先跳过它 //////////////////
+            VkPhysicalDeviceProperties deviceProperties;
+            vkGetPhysicalDeviceProperties(device, &deviceProperties);
+            std::string dev_name(deviceProperties.deviceName);
+            std::cout << "device name:" << dev_name << std::endl;
+            if (dev_name.find("Intel") != std::string::npos)
+                continue;
+            //////////////////////////////////////////////////////////////////////////////////////////
+
             if (isDeviceSuitable(device)) {
                 physicalDevice = device;
                 break;
