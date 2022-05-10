@@ -22,3 +22,4 @@ include_directories(3rd-party/glm)
 include(cmake/shader.cmake)
 
 add_subdirectory(test_triangle)
+add_subdirectory(test_01_instance_creation)
