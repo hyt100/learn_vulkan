@@ -23,3 +23,4 @@ include(cmake/shader.cmake)
 
 add_subdirectory(test_triangle)
 add_subdirectory(test_01_instance_creation)
+add_subdirectory(test_02_validation_layers)
