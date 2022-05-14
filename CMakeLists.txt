@@ -22,5 +22,6 @@ include_directories(3rd-party/glm)
 include(cmake/shader.cmake)
 
 add_subdirectory(test_triangle)
-add_subdirectory(test_01_instance_creation)
-add_subdirectory(test_02_validation_layers)
+add_subdirectory(001_instance_creation)
+add_subdirectory(002_validation_layers)
+add_subdirectory(003_physical_device_selection)
