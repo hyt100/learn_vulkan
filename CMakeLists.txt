@@ -31,3 +31,5 @@ add_subdirectory(006_swap_chain_creation)
 add_subdirectory(007_image_views)
 add_subdirectory(010_fixed_functions)
 add_subdirectory(013_framebuffers)
+add_subdirectory(015_triangle)
+
