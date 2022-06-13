@@ -631,8 +631,8 @@ private:
     }
 
     void drawFrame() {
-        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(device, 1, &inFlightFence);
+        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);  // 等待上一次提交的指令结束执行
+        vkResetFences(device, 1, &inFlightFence);  // 将fence对象转到unsignaled状态。
 
         // 从交换链获取一张图像
         uint32_t imageIndex;
