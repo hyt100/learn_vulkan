@@ -631,10 +631,10 @@ private:
     }
 
     void drawFrame() {
-        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);  // 等待上一次提交的指令结束执行
+        vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);  // CPU阻塞等待GPU结束执行上一次提交到的指令
         vkResetFences(device, 1, &inFlightFence);  // 将fence对象转到unsignaled状态。
 
-        // 从交换链获取一张图像
+        // 从交换链获取一张图像 (此处不会阻塞CPU，获取成功后会通知信号量imageAvailableSemaphore)
         uint32_t imageIndex;
         vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex); // UINT64_MAX 表示禁用图像获取超时
 
