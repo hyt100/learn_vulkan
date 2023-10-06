@@ -46,6 +46,7 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
     }
 }
 
+// 由于 vkDestroyDebugUtilsMessengerEXT 函数是一个扩展函数, 不会被 Vulkan 库自动加载, 所以需要我们自己使用 vkGetInstanceProcAddr 函数来加载它。
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
@@ -171,7 +172,9 @@ private:
             DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
         }
 
-        vkDestroySurfaceKHR(instance, surface, nullptr);  //需要在 Vulkan 实例被清除之前完成。
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+
+        // 使用Vulkan API创建的对象应该在 Vulkan实例 清除之前被清除。
         vkDestroyInstance(instance, nullptr);
 
         glfwDestroyWindow(window);
@@ -179,14 +182,14 @@ private:
         glfwTerminate();
     }
 
+    // 创建实例
     void createInstance() {
         if (enableValidationLayers && !checkValidationLayerSupport()) {
             throw std::runtime_error("validation layers requested, but not available!");
         }
 
-        // 创建实例
         // 填写应用程序信息,这些信息的填写不是必须的,但填写的信息可能会作为驱动程序的优化依据,让驱动程序进行一些特殊的优化。
-        // 比如,应用程序使用了某个引擎,驱动程序对这个引擎有一些特殊处理,这时就可能有很大的优化提升.
+        //    比如,应用程序使用了某个引擎,驱动程序对这个引擎有一些特殊处理,这时就可能有很大的优化提升.
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = "Hello Triangle";
@@ -199,23 +202,21 @@ private:
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
 
+        // 指定全局扩展
         auto extensions = getRequiredExtensions();
         createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
         createInfo.ppEnabledExtensionNames = extensions.data();
 
+        // 指定全局校验层
         createInfo.enabledLayerCount = 0;
-
-        VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+        createInfo.pNext = nullptr;
         if (enableValidationLayers) {
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
             createInfo.ppEnabledLayerNames = validationLayers.data();
 
-            populateDebugMessengerCreateInfo(debugCreateInfo);
-            createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;   // 这里是为啥也要加一次 ???
-        } else {
-            createInfo.enabledLayerCount = 0;
-
-            createInfo.pNext = nullptr;
+            // VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+            // populateDebugMessengerCreateInfo(debugCreateInfo);
+            // createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;   // 这里是为啥也要加一次 ???
         }
 
         if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
@@ -1010,7 +1011,7 @@ private:
         return buffer;
     }
 
-    // debug输出的回调函数
+    // debug输出的回调函数 (参数 pUserData 是一个指向了我们设置回调函数时,传递的数据的指针)
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
             VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
     {
