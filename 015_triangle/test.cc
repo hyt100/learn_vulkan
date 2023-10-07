@@ -23,7 +23,7 @@ const std::vector<const char*> validationLayers = {
 
 // 设备扩展（创建逻辑设备时使用）
 const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME    // VK_KHR_swapchain 是一个设备特定扩展
 };
 
 // 通过宏控制是否启用校验层
@@ -229,22 +229,24 @@ private:
     // 对于同一个物理设备,我们可以根据需求的不同,创建多个逻辑设备。
     void createLogicalDevice() {
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-
         std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()}; //使用set对索引号去重
+        
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-
         float queuePriority = 1.0f; //// Vulkan 需要我们赋予队列一个 0.0 到 1.0 之间的浮点数作为优先级来控制指令缓冲的执行顺序。即使只有一个队列,我们也要显式地赋予队列优先级
         for (uint32_t queueFamily : uniqueQueueFamilies) {
             VkDeviceQueueCreateInfo queueCreateInfo{};
             queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueCreateInfo.queueFamilyIndex = queueFamily;   //队列族索引号
-            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.queueCount = 1; // 这里我们对每个队列族只创建一个队列 (驱动程序允许创建少数量的队列，所以这里虽然可以多个，但是没有太大必要)
             queueCreateInfo.pQueuePriorities = &queuePriority;
             queueCreateInfos.push_back(queueCreateInfo);
         }
 
+        // 指定应用程序使用的设备特性: todo
         VkPhysicalDeviceFeatures deviceFeatures{};
 
+        // 和 Vulkan 实例一样，设备也需要设置扩展和校验层，注意只需要设置针对设备的那些扩展;
+        // 创建逻辑设备时指定的队列会随着逻辑设备一同被创建。
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.pQueueCreateInfos = queueCreateInfos.data();  //队列信息
@@ -295,17 +297,18 @@ private:
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
         createInfo.imageExtent = extent;
         createInfo.imageArrayLayers = 1;  // 每个图像所包含的层次, 通常是1。VR相关的应用会使用更多的层次。
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // 在图像上进行怎样的操作, 这里我们指定为绘制操作，也就是将图像作为一个颜色附着来使用。
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // 图像的用途, 这里我们指定为绘制操作，也就是将图像作为一个颜色附着来使用。
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
+        // 如果图形和呈现队列不是同一个队列族，就使用CONCURRENT协同模式；否则，就使用EXCLUSIVE模式。
         if (indices.graphicsFamily != indices.presentFamily) {
-            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT; // 图像可以在多个队列族间使用,不需要显式地改变图像所有权。
             createInfo.queueFamilyIndexCount = 2;
             createInfo.pQueueFamilyIndices = queueFamilyIndices;
         } else {
-            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;  // 一张图像同一时间只能被一个队列族所拥有,在另一队列族使用它之前,必须显式地改变图像所有权。这一模式下性能表现最佳。
         }
 
         // 我们可以为交换链中的图像指定一个固定的变换操作 (需要交换链具有supportedTransforms 特性),比如顺时针旋转 90 度或是水平翻转。
@@ -344,7 +347,7 @@ private:
             VkImageViewCreateInfo createInfo{};
             createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             createInfo.image = swapChainImages[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // 指定图像被看作是一维纹理、二维纹理、三维纹理还是立方体贴图
             createInfo.format = swapChainImageFormat;
             createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;  // components成员用于进行图像颜色通道的映射
             createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -717,7 +720,7 @@ private:
             }
         }
 
-        return VK_PRESENT_MODE_FIFO_KHR;
+        return VK_PRESENT_MODE_FIFO_KHR; // VK_PRESENT_MODE_FIFO_KHR 模式是保证一定可用的，所以作为最后的备选
     }
 
     // 选择最佳交换范围 ( 交换范围是交换链中图像的分辨率,它几乎总是和我们要显示图像的窗口的分辨率相同。 )
@@ -811,8 +814,7 @@ private:
         // 检测设备扩展是否支持
         bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-        // 检测交换链的能力是否满足需求
-        // 需要至少支持一种图像格式和一种支持我们的窗口表面的呈现模式
+        // 检测交换链的能力是否满足需求，需要至少支持：一种图像格式、一种支持我们的窗口表面的呈现模式
         bool swapChainAdequate = false;
         if (extensionsSupported) {
             SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
