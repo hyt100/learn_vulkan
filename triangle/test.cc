@@ -414,29 +414,36 @@ private:
         vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;  // 指定着色器在管线的哪一阶段被使用
         vertShaderStageInfo.module = vertShaderModule; // 指定使用的着色器模块对象
         vertShaderStageInfo.pName = "main";  // 指定调用的着色器函数 (在同一份代码中可以实现多个片段着色器,然后通过不同的 "函数名" 调用它们)
+        vertShaderStageInfo.pSpecializationInfo = nullptr; // 可以通过这一成员变量指定着色器用到的常量, 我们可以对同一个着色器模块对象指定不同
+                                                           // 的着色器常量用于管线创建,这使得编译器可以根据指定的着色器常量来消除一些条件分支,这比在渲染
+                                                           // 时,使用变量配置着色器带来的效率要高得多。如果不使用着色器常量,可以将它设置为 nullptr。
+                                                           // （理解：类似设置给shader设置Uniform常量）
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         fragShaderStageInfo.module = fragShaderModule;
         fragShaderStageInfo.pName = "main";
+        fragShaderStageInfo.pSpecializationInfo = nullptr;
 
         VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-        // 顶点输入
-        // 由于我们直接在顶点着色器中硬编码顶点数据,所以我们填写结构体信息时指定不载入任何顶点数据。
+        // 顶点输入 (描述传递给顶点着色器的顶点数据格式)
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
+        vertexInputInfo.vertexBindingDescriptionCount = 0; // 由于我们直接在顶点着色器中硬编码顶点数据,所以我们填写结构体信息时指定不载入任何顶点数据。
+        vertexInputInfo.pVertexBindingDescriptions = nullptr;
+        vertexInputInfo.vertexAttributeDescriptionCount = 0; // 由于我们直接在顶点着色器中硬编码顶点数据,所以我们填写结构体信息时指定不载入任何顶点数据。
+        vertexInputInfo.pVertexAttributeDescriptions = nullptr;
 
-        // 输入装配
+        // 输入装配 (描述两个信息:顶点数据定义了哪种类型的几何图元,以及是否启用几何图元重启)
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // 每三个顶点构成一个三角形图元
-        inputAssembly.primitiveRestartEnable = VK_FALSE;
+        inputAssembly.primitiveRestartEnable = VK_FALSE; // 用于带有 _STRIP 结尾的图元类型
 
-        // 视口和裁剪
+        // 视口和裁剪 （可以使用多个视口和裁剪矩形）
+        // 视口： 定义了图像到帧缓冲的映射关系
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -446,15 +453,16 @@ private:
         viewport.minDepth = 0.0f;  // 指定帧缓冲使用的深度值的范围
         viewport.maxDepth = 1.0f;
 
+        // 裁剪： 定义了哪一区域的像素实际vertexInputInfo被存储在帧缓存。任何位于裁剪矩形外的像素都会被光栅化程序丢弃。
         VkRect2D scissor{};
         scissor.offset = {0, 0};
         scissor.extent = swapChainExtent; // 在本教程,我们在整个帧缓冲上进行绘制操作,所以将裁剪范围设置为和帧缓冲大小一样
 
         VkPipelineViewportStateCreateInfo viewportState{};
         viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        viewportState.viewportCount = 1;
+        viewportState.viewportCount = 1; // 视口数量
         viewportState.pViewports = &viewport;
-        viewportState.scissorCount = 1;
+        viewportState.scissorCount = 1; // 裁剪数量
         viewportState.pScissors = &scissor;
 
         // 光栅化
@@ -463,7 +471,7 @@ private:
         rasterizer.depthClampEnable = VK_FALSE; // VK_TRUE 表示在近平面和远平面外的片段会被截断为在近平面和远平面上,而不是直接丢弃这些片段。
                                                 // 这对于阴影贴图的生成很有用。使用这一设置需要开启相应的 GPU 特性。
         rasterizer.rasterizerDiscardEnable = VK_FALSE;  // VK_TRUE 表示所有几何图元都不能通过光栅化阶段。这一设置会禁止一切片段输出到帧缓冲。
-        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // VK_POLYGON_MODE_FILL表示整个多边形,包括多边形内部都产生片段
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;  // 指定几何图元生成片段的方式： VK_POLYGON_MODE_FILL表示整个多边形,包括多边形内部都产生片段
         rasterizer.lineWidth = 1.0f;  // lineWidth 成员变量用于指定光栅化后的线段宽度,它以线宽所占的片段数目为单位。
                                       // 线宽的最大值依赖于硬件,使用大于 1.0f 的线宽,需要启用相应的 GPU 特性。
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT; // 指定使用的表面剔除类型
@@ -520,7 +528,7 @@ private:
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
-        pipelineInfo.layout = pipelineLayout;  // 指定之前创建的管线布局
+        pipelineInfo.layout = pipelinevertexInputInfoLayout;  // 指定之前创建的管线布局
         pipelineInfo.renderPass = renderPass;  // 引用之前创建的渲染流程对象
         pipelineInfo.subpass = 0;              // 子流程在子流程数组中的索引
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
