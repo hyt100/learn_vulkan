@@ -528,7 +528,7 @@ private:
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
         pipelineInfo.pColorBlendState = &colorBlending;
-        pipelineInfo.layout = pipelinevertexInputInfoLayout;  // 指定之前创建的管线布局
+        pipelineInfo.layout = pipelineLayout;  // 指定之前创建的管线布局
         pipelineInfo.renderPass = renderPass;  // 引用之前创建的渲染流程对象
         pipelineInfo.subpass = 0;              // 子流程在子流程数组中的索引
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
